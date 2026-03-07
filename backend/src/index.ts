@@ -11,6 +11,7 @@ import pullsRoutes from './routes/pulls';
 import contentsRoutes from './routes/contents';
 import latexRoutes from './routes/latex';
 import { errorHandler } from './middleware/errorHandler';
+import { runMigrations } from './db/migrate';
 
 dotenv.config();
 
@@ -42,6 +43,14 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Paperflow running on http://localhost:${PORT}`);
+async function main() {
+  await runMigrations();
+  app.listen(PORT, () => {
+    console.log(`Paperflow running on http://localhost:${PORT}`);
+  });
+}
+
+main().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

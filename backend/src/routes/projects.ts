@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
+import { db } from '../db';
+import { projects } from '../db/schema';
 
 const router = Router();
 
@@ -15,15 +17,33 @@ export interface Project {
   createdAt: string;
 }
 
-const projects: Map<string, Project> = new Map();
+function toProject(row: typeof projects.$inferSelect): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    github: {
+      owner: row.githubOwner,
+      repo: row.githubRepo,
+      defaultBranch: row.defaultBranch,
+    },
+    createdAt: row.createdAt.toISOString(),
+  };
+}
 
-router.get('/api/projects', (_req: Request, res: Response) => {
-  res.json(Array.from(projects.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ));
+router.get('/api/projects', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rows = await db
+      .select()
+      .from(projects)
+      .orderBy(projects.createdAt);
+    res.json(rows.map(toProject).reverse());
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post('/api/projects', (req: Request, res: Response, next: NextFunction) => {
+router.post('/api/projects', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers['x-github-token'] as string;
     if (!token) {
@@ -37,22 +57,24 @@ router.post('/api/projects', (req: Request, res: Response, next: NextFunction) =
       return;
     }
 
-    const project: Project = {
-      id: randomUUID(),
-      name,
-      description: description ?? '',
-      github,
-      createdAt: new Date().toISOString(),
-    };
+    const [row] = await db
+      .insert(projects)
+      .values({
+        name,
+        description: description ?? '',
+        githubOwner: github.owner,
+        githubRepo: github.repo,
+        defaultBranch: github.defaultBranch,
+      })
+      .returning();
 
-    projects.set(project.id, project);
-    res.status(201).json(project);
+    res.status(201).json(toProject(row));
   } catch (error) {
     next(error);
   }
 });
 
-router.delete('/api/projects/:id', (req: Request, res: Response, next: NextFunction) => {
+router.delete('/api/projects/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers['x-github-token'] as string;
     if (!token) {
@@ -61,12 +83,16 @@ router.delete('/api/projects/:id', (req: Request, res: Response, next: NextFunct
     }
 
     const { id } = req.params;
-    if (!projects.has(id)) {
+    const deleted = await db
+      .delete(projects)
+      .where(eq(projects.id, id))
+      .returning();
+
+    if (deleted.length === 0) {
       res.status(404).json({ error: 'Project not found' });
       return;
     }
 
-    projects.delete(id);
     res.status(204).send();
   } catch (error) {
     next(error);
