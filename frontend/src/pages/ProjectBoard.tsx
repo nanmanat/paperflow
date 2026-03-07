@@ -139,7 +139,7 @@ export function ProjectBoard() {
 
   useEffect(() => {
     if (!githubToken) {
-      toast.error('GitHub token not configured');
+      toast('No GitHub token — read-only mode. Set a token in Settings to take actions.', { icon: '⚠️' });
     }
   }, [githubToken]);
 
@@ -179,6 +179,7 @@ export function ProjectBoard() {
   };
 
   const openBranchDialog = async (card: KanbanCard) => {
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to create branches'); return; }
     setBranchDialogCard(card);
     setBranchName(`feature/${slugify(card.title)}`);
     setBaseBranch(project.github.defaultBranch);
@@ -206,6 +207,7 @@ export function ProjectBoard() {
   };
 
   const openPrDialog = (card: KanbanCard) => {
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to create pull requests'); return; }
     setPrDialogCard(card);
     setPrTitle(card.title);
     setPrBody(card.description || '');
@@ -298,6 +300,7 @@ export function ProjectBoard() {
     } else if (targetColumn === 'in_review' && cardData.branchName && !cardData.prNumber) {
       openPrDialog(cardData);
     } else if (targetColumn === 'done' && cardData.prNumber && !cardData.prMerged) {
+      if (!githubToken) { toast.error('Set your GitHub token in Settings to merge pull requests'); return; }
       toast((t) => (
         <div className="flex items-center gap-4">
           <span>Mark PR !{cardData.prNumber} as merged?</span>

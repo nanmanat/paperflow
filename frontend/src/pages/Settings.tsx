@@ -95,7 +95,7 @@ export function Settings() {
             <h2 className="text-sm font-semibold text-foreground">Backend Proxy URL</h2>
           </div>
           <p className="text-xs text-muted-foreground">
-            The local Express proxy server URL. Default is <code className="bg-muted px-1 rounded">http://localhost:3001</code>.
+            Leave blank when using the hosted app. Set to <code className="bg-muted px-1 rounded">http://localhost:3001</code> for local development.
           </p>
           <Input
             value={proxy}

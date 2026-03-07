@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, ExternalLink, Trash2, GitBranch, Book } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
     setLoading(true)
     try {
       const repoData = await getRepo(form.owner, form.repo)
-      addProject({
+      await addProject({
         name: form.name || repoData.name,
         description: form.description || repoData.description || '',
         github: { owner: form.owner, repo: form.repo, defaultBranch: form.branch || repoData.default_branch }
@@ -79,6 +79,18 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
 function ProjectCard({ project }: { project: Project }) {
   const { deleteProject } = useProjectStore()
+  const { githubToken } = useConfigStore()
+
+  const handleDelete = async () => {
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to delete projects'); return }
+    if (!confirm(`Delete "${project.name}"?`)) return
+    try {
+      await deleteProject(project.id)
+      toast.success('Project deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete project')
+    }
+  }
   return (
     <div className="group rounded-lg border border-border bg-card hover:border-primary/50 transition-colors">
       <div className="p-5">
@@ -98,7 +110,7 @@ function ProjectCard({ project }: { project: Project }) {
             </div>
           </div>
           <button
-            onClick={() => { if (confirm(`Delete "${project.name}"?`)) { deleteProject(project.id); toast.success('Project deleted') } }}
+            onClick={handleDelete}
             className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
           >
             <Trash2 className="h-4 w-4" />
@@ -132,9 +144,13 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 export function Home() {
-  const { projects } = useProjectStore()
+  const { projects, loading, fetchProjects } = useProjectStore()
   const [showNew, setShowNew] = useState(false)
   const { githubToken } = useConfigStore()
+
+  useEffect(() => {
+    fetchProjects()
+  }, [fetchProjects])
 
   return (
     <div className="px-6 py-8">
@@ -151,12 +167,14 @@ export function Home() {
 
         {!githubToken && (
           <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 flex items-center gap-2">
-            <span className="text-yellow-400 text-sm">⚠ No GitHub token configured.</span>
-            <Link to="/settings" className="text-yellow-300 text-sm underline">Go to Settings</Link>
+            <span className="text-yellow-400 text-sm">⚠ No GitHub token configured — you can browse projects but cannot create, delete, or take actions.</span>
+            <Link to="/settings" className="text-yellow-300 text-sm underline shrink-0">Set token</Link>
           </div>
         )}
 
-        {projects.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20 text-muted-foreground text-sm">Loading projects…</div>
+        ) : projects.length === 0 ? (
           <div className="text-center py-20 border border-dashed border-border rounded-lg">
             <Book className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
             <p className="text-muted-foreground text-sm mb-4">No projects yet. Connect a GitHub repo to get started.</p>
