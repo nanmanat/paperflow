@@ -181,7 +181,9 @@ router.get('/api/repos/:owner/:repo/pulls/:number/threads', async (req: Request,
                   createdAt: string;
                   path: string;
                   line: number | null;
+                  startLine: number | null;
                   originalLine: number | null;
+                  originalStartLine: number | null;
                   diffHunk: string;
                   url: string;
                 }>;
@@ -208,7 +210,9 @@ router.get('/api/repos/:owner/:repo/pulls/:number/threads', async (req: Request,
                     createdAt
                     path
                     line
+                    startLine
                     originalLine
+                    originalStartLine
                     diffHunk
                     url
                   }

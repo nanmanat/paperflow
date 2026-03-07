@@ -16,11 +16,30 @@ import { Select } from '@/components/ui/select';
 
 type PdfState = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; url: string } | { status: 'error'; message: string };
 
-function changedLinesFromHunk(diffHunk: string): string[] {
-  const lines = diffHunk.split('\n').filter((l) => !l.startsWith('@@'));
-  const changed = lines.filter((l) => l.startsWith('+') || l.startsWith('-'));
-  const last = changed.length > 0 ? changed[changed.length - 1] : lines[lines.length - 1];
-  return last ? [last] : [];
+function hunkLines(diffHunk: string, line: number | null, startLine: number | null): string[] {
+  const rawLines = diffHunk.split('\n');
+  const headerMatch = rawLines[0]?.match(/\+(\d+)/);
+  if (!line || !headerMatch) {
+    const changed = rawLines.slice(1).filter((l) => l.startsWith('+') || l.startsWith('-'));
+    const last = changed[changed.length - 1] ?? rawLines[rawLines.length - 1];
+    return last ? [last] : [];
+  }
+
+  const hunkStart = parseInt(headerMatch[1], 10);
+  const endLine = line;
+  const beginLine = startLine ?? line;
+
+  const result: string[] = [];
+  let currentLine = hunkStart - 1;
+  for (let i = 1; i < rawLines.length; i++) {
+    const l = rawLines[i] ?? '';
+    if (!l.startsWith('-')) currentLine++;
+    if (currentLine >= beginLine && currentLine <= endLine) {
+      result.push(l);
+    }
+    if (currentLine > endLine) break;
+  }
+  return result.length > 0 ? result : [rawLines[rawLines.length - 1] ?? ''];
 }
 
 export function PRViewPage() {
@@ -298,7 +317,7 @@ export function PRViewPage() {
 
                       {firstComment.diffHunk && (
                         <pre className="text-[10px] leading-5 font-mono overflow-x-auto bg-[#0d1117] px-3 py-2 border-b border-border/50">
-                          {changedLinesFromHunk(firstComment.diffHunk).map((line, i) => (
+                          {hunkLines(firstComment.diffHunk, firstComment.line, firstComment.startLine).map((line, i) => (
                             <div
                               key={i}
                               className={

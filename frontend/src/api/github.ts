@@ -164,7 +164,9 @@ export interface GitHubThreadComment {
   createdAt: string;
   path: string;
   line: number | null;
+  startLine: number | null;
   originalLine: number | null;
+  originalStartLine: number | null;
   diffHunk: string;
   url: string;
 }
