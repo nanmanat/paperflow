@@ -13,7 +13,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function PRListPage() {
   const { id } = useParams<{ id: string }>();
-  const project = useProjectStore((s) => s.getProject(id!));
+  const { projects, loading: projectsLoading, fetchProjects, getProject } = useProjectStore();
+  const project = getProject(id!);
   const { githubToken } = useConfigStore();
 
   const [prs, setPrs] = useState<GitHubPR[]>([]);
@@ -40,9 +41,14 @@ export function PRListPage() {
   }, [project, githubToken, tab]);
 
   useEffect(() => {
+    if (projects.length === 0) fetchProjects();
+  }, []);
+
+  useEffect(() => {
     fetchPRs();
   }, [fetchPRs]);
 
+  if (projectsLoading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
   if (!project) return <div className="p-8 text-center text-muted-foreground">Project not found</div>;
   if (!githubToken) return <div className="p-8 text-center text-muted-foreground">GitHub token missing</div>;
 

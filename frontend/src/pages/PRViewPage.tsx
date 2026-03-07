@@ -21,7 +21,8 @@ export function PRViewPage() {
   const prNum = parseInt(number || '0', 10);
   const navigate = useNavigate();
 
-  const project = useProjectStore((s) => s.getProject(id!));
+  const { projects, loading: projectsLoading, fetchProjects, getProject } = useProjectStore();
+  const project = getProject(id!);
   const { githubToken } = useConfigStore();
   const { cards, updateCard, moveCard } = useKanbanStore();
 
@@ -68,6 +69,10 @@ export function PRViewPage() {
   }, [project, githubToken, prNum, selectedTexFile]);
 
   useEffect(() => { fetchPRData(); }, [fetchPRData]);
+
+  useEffect(() => {
+    if (projects.length === 0) fetchProjects();
+  }, []);
 
   useEffect(() => {
     if (!selectedTexFile || !pr || !project) return;
@@ -133,6 +138,10 @@ export function PRViewPage() {
       setIsMerging(false);
     }
   };
+
+  if (projectsLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+  }
 
   if (!project || !githubToken) {
     return <div className="p-8 text-center text-muted-foreground">Setup required.</div>;
