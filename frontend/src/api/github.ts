@@ -30,6 +30,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface SharedProject {
+  id: string;
+  name: string;
+  description: string;
+  github: { owner: string; repo: string; defaultBranch: string };
+  createdAt: string;
+}
+
+export const listProjects = () => request<SharedProject[]>('/api/projects')
+export const createProject = (data: Omit<SharedProject, 'id' | 'createdAt'>) =>
+  request<SharedProject>('/api/projects', { method: 'POST', body: JSON.stringify(data) })
+export const deleteProjectRemote = (id: string) =>
+  request<void>(`/api/projects/${id}`, { method: 'DELETE' })
+
 // User
 export const getUser = () => request<{ login: string; name: string; avatar_url: string }>('/api/user')
 
