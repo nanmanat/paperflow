@@ -239,6 +239,11 @@ export function PRViewPage() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <a href={pr.html_url} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="gap-1.5 text-xs h-7 px-2.5">
+                <ExternalLink className="w-3 h-3" /> View on GitHub
+              </Button>
+            </a>
             {canMerge && (
               <Button onClick={handleMerge} disabled={isMerging} className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs px-3">
                 {isMerging
@@ -277,11 +282,6 @@ export function PRViewPage() {
                 <span className="text-green-500 flex items-center gap-0.5"><Plus className="w-2.5 h-2.5" />{pr.additions}</span>
                 <span className="text-red-500 flex items-center gap-0.5"><Minus className="w-2.5 h-2.5" />{pr.deletions}</span>
               </div>
-              <a href={pr.html_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="gap-1.5 text-xs h-7 px-2.5">
-                  <ExternalLink className="w-3 h-3" /> View on GitHub
-                </Button>
-              </a>
             </div>
 
             {threads.length === 0 && issueComments.length === 0 ? (
@@ -395,15 +395,6 @@ export function PRViewPage() {
                       <option key={f.filename} value={f.filename}>{f.filename}</option>
                     ))}
                   </Select>
-                  <a
-                    href={pr.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    View on GitHub
-                  </a>
                 </div>
 
                 <div className="flex-1 min-h-0">
