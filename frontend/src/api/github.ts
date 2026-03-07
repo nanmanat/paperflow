@@ -30,6 +30,50 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export type ColumnId = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done'
+
+export interface KanbanCard {
+  id: string
+  projectId: string
+  title: string
+  description: string
+  column: ColumnId
+  branchName?: string
+  prNumber?: number
+  prMerged?: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface KanbanBoard {
+  cards: Record<string, KanbanCard>
+  columns: Record<ColumnId, string[]>
+}
+
+export const getBoard = (projectId: string) =>
+  request<KanbanBoard>(`/api/projects/${projectId}/board`)
+
+export const createCard = (projectId: string, data: Pick<KanbanCard, 'title' | 'description' | 'column'>) =>
+  request<{ card: KanbanCard; columns: Record<ColumnId, string[]> }>(`/api/projects/${projectId}/cards`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const updateCard = (projectId: string, cardId: string, data: Partial<Omit<KanbanCard, 'id' | 'projectId' | 'createdAt'>>) =>
+  request<{ card: KanbanCard; columns: Record<ColumnId, string[]> }>(`/api/projects/${projectId}/cards/${cardId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+
+export const deleteCard = (projectId: string, cardId: string) =>
+  request<void>(`/api/projects/${projectId}/cards/${cardId}`, { method: 'DELETE' })
+
+export const updateColumns = (projectId: string, columns: Record<ColumnId, string[]>) =>
+  request<Record<ColumnId, string[]>>(`/api/projects/${projectId}/columns`, {
+    method: 'PUT',
+    body: JSON.stringify(columns),
+  })
+
 export interface SharedProject {
   id: string;
   name: string;
