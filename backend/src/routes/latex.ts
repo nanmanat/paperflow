@@ -107,6 +107,22 @@ function patchThaiPreamble(source: string): string {
   );
 }
 
+function patchFontPaths(source: string, fontDir: string): string {
+  const dir = fontDir.replace(/\\/g, '/') + '/';
+  const fontOptions =
+    `[Path=${dir},` +
+    `UprightFont=THSarabunNew.ttf,` +
+    `BoldFont=THSarabunNew-Bold.ttf,` +
+    `ItalicFont=THSarabunNew-Italic.ttf,` +
+    `BoldItalicFont=THSarabunNew-BoldItalic.ttf]`;
+
+  return source
+    .replace(/\\setmainfont\s*(?:\[.*?\])?\s*\{TH Sarabun New\}/gs,
+      `\\setmainfont${fontOptions}{TH Sarabun New}`)
+    .replace(/\\newfontfamily(\s*\\[a-zA-Z]+)\s*(?:\[.*?\])?\s*\{TH Sarabun New\}/gs,
+      `\\newfontfamily$1${fontOptions}{TH Sarabun New}`);
+}
+
 router.post('/api/latex/compile', async (req: Request, res: Response) => {
   const { owner, repo, ref, filepath } = req.body as {
     owner?: string; repo?: string; ref?: string; filepath?: string;
@@ -156,13 +172,15 @@ router.post('/api/latex/compile', async (req: Request, res: Response) => {
     const texAbsPath = join(tmpDir, filepath);
     const outDir = dirname(texAbsPath);
 
-    const { readFile } = await import('fs/promises');
-    const texSource = await readFile(texAbsPath, 'utf-8');
-    if (needsThaiPatch(texSource)) {
-      await writeFile(texAbsPath, patchThaiPreamble(texSource), 'utf-8');
-    }
-
     const [tectonic] = await Promise.all([ensureTectonic(), ensureFonts()]);
+
+    const { readFile } = await import('fs/promises');
+    let texSource = await readFile(texAbsPath, 'utf-8');
+    if (needsThaiPatch(texSource)) {
+      texSource = patchThaiPreamble(texSource);
+    }
+    texSource = patchFontPaths(texSource, FONT_DIR);
+    await writeFile(texAbsPath, texSource, 'utf-8');
     await execFileAsync(
       tectonic,
       ['-X', 'compile', '--outfmt', 'pdf', '--outdir', outDir, texAbsPath],
