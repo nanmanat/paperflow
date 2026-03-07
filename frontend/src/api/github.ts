@@ -22,7 +22,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => ({ error: 'Request failed' }))
     throw new GitHubApiError(res.status, err.error ?? err.message ?? 'Request failed')
   }
-  // Some endpoints return plain text (diff)
+  if (res.status === 204) return undefined as T
   const contentType = res.headers.get('content-type') ?? ''
   if (contentType.includes('text/plain') || contentType.includes('text/x-diff')) {
     return res.text() as Promise<T>
