@@ -15,8 +15,6 @@ export interface Project {
   createdAt: string;
 }
 
-// In-memory store — persists for the lifetime of the server process.
-// Replace with a JSON file or DB for durability across restarts.
 const projects: Map<string, Project> = new Map();
 
 router.get('/api/projects', (_req: Request, res: Response) => {
@@ -25,7 +23,6 @@ router.get('/api/projects', (_req: Request, res: Response) => {
   ));
 });
 
-// POST /api/projects — requires token
 router.post('/api/projects', (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers['x-github-token'] as string;
@@ -55,7 +52,6 @@ router.post('/api/projects', (req: Request, res: Response, next: NextFunction) =
   }
 });
 
-// DELETE /api/projects/:id — requires token
 router.delete('/api/projects/:id', (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers['x-github-token'] as string;

@@ -123,8 +123,8 @@ export function PRViewPage() {
       toast.success('Merge request merged successfully');
       const card = Object.values(cards).find((c) => c.projectId === project.id && c.prNumber === pr.number);
       if (card) {
-        updateCard(card.id, { prMerged: true });
-        if (card.column !== 'done') moveCard(card.id, 'done');
+        updateCard(project.id, card.id, { prMerged: true });
+        if (card.column !== 'done') moveCard(project.id, card.id, 'done');
       }
       await fetchPRData();
     } catch (e: any) {

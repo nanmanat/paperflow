@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
@@ -42,7 +42,6 @@ import {
 import { Select } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
 
-// --- Sortable Card Component ---
 function SortableCard({ card, onClick }: { card: KanbanCard; onClick: () => void }) {
   const {
     attributes,
@@ -100,24 +99,21 @@ function SortableCard({ card, onClick }: { card: KanbanCard; onClick: () => void
   );
 }
 
-// Helper to ensure columns can receive drops even when empty
 function ColumnDroppable({ id }: { id: string }) {
   const { setNodeRef } = useDroppable({ id, data: { type: 'Column' } });
   return <div ref={setNodeRef} className="h-4 w-full" />;
 }
 
-// --- Main Board Component ---
 export function ProjectBoard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const project = useProjectStore((s) => s.getProject(id!));
-  const { cards, columns, addCard, updateCard, deleteCard, moveCard, reorderColumn, getProjectCards } = useKanbanStore();
+  const { cards, columns, loading, fetchBoard, addCard, updateCard, deleteCard, moveCard, reorderColumn } = useKanbanStore();
   const { githubToken } = useConfigStore();
 
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
 
-  // Dialog States
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addTitle, setAddTitle] = useState('');
   const [addDesc, setAddDesc] = useState('');
@@ -138,6 +134,10 @@ export function ProjectBoard() {
   const [isCreatingPr, setIsCreatingPr] = useState(false);
 
   useEffect(() => {
+    if (id) fetchBoard(id);
+  }, [id, fetchBoard]);
+
+  useEffect(() => {
     if (!githubToken) {
       toast('No GitHub token — read-only mode. Set a token in Settings to take actions.', { icon: '⚠️' });
     }
@@ -152,30 +152,39 @@ export function ProjectBoard() {
     return <div className="p-8 text-center text-muted-foreground">Project not found</div>;
   }
 
-  // --- Handlers ---
-  const handleAddSubmit = () => {
+  const handleAddSubmit = async () => {
     if (!addTitle.trim()) return;
-    addCard({
-      projectId: project.id,
-      title: addTitle.trim(),
-      description: addDesc.trim(),
-      column: 'backlog',
-    });
-    setIsAddOpen(false);
-    setAddTitle('');
-    setAddDesc('');
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to add cards'); return; }
+    try {
+      await addCard({ projectId: project.id, title: addTitle.trim(), description: addDesc.trim(), column: 'backlog' });
+      setIsAddOpen(false);
+      setAddTitle('');
+      setAddDesc('');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add card');
+    }
   };
 
-  const handleEditSubmit = () => {
+  const handleEditSubmit = async () => {
     if (!editCard || !editTitle.trim()) return;
-    updateCard(editCard.id, { title: editTitle.trim(), description: editDesc.trim() });
-    setEditCard(null);
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to edit cards'); return; }
+    try {
+      await updateCard(project.id, editCard.id, { title: editTitle.trim(), description: editDesc.trim() });
+      setEditCard(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update card');
+    }
   };
 
-  const handleDeleteCard = () => {
+  const handleDeleteCard = async () => {
     if (!editCard) return;
-    deleteCard(editCard.id);
-    setEditCard(null);
+    if (!githubToken) { toast.error('Set your GitHub token in Settings to delete cards'); return; }
+    try {
+      await deleteCard(project.id, editCard.id);
+      setEditCard(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete card');
+    }
   };
 
   const openBranchDialog = async (card: KanbanCard) => {
@@ -196,7 +205,7 @@ export function ProjectBoard() {
     setIsCreatingBranch(true);
     try {
       await createBranch(project.github.owner, project.github.repo, branchName.trim(), baseBranch);
-      updateCard(branchDialogCard.id, { branchName: branchName.trim() });
+      await updateCard(project.id, branchDialogCard.id, { branchName: branchName.trim() });
       toast.success('Branch created successfully');
       setBranchDialogCard(null);
     } catch (e: any) {
@@ -223,7 +232,7 @@ export function ProjectBoard() {
         head: prDialogCard.branchName,
         base: project.github.defaultBranch,
       });
-      updateCard(prDialogCard.id, { prNumber: pr.number });
+      await updateCard(project.id, prDialogCard.id, { prNumber: pr.number });
       toast.success(`Merge Request !${pr.number} created`);
       setPrDialogCard(null);
     } catch (e: any) {
@@ -233,7 +242,6 @@ export function ProjectBoard() {
     }
   };
 
-  // --- DND Handlers ---
   const handleDragStart = (e: DragStartEvent) => {
     if (e.active.data.current?.type === 'Card') {
       setActiveCard(e.active.data.current.card);
@@ -246,7 +254,7 @@ export function ProjectBoard() {
 
     const activeId = active.id as string;
     const overId = over.id as string;
-    
+
     if (activeId === overId) return;
 
     const isActiveCard = active.data.current?.type === 'Card';
@@ -261,13 +269,13 @@ export function ProjectBoard() {
     if (isOverColumn) {
       const targetColumn = overId as ColumnId;
       if (activeCardData.column !== targetColumn) {
-        moveCard(activeId, targetColumn);
+        moveCard(project.id, activeId, targetColumn).catch(() => {});
       }
     } else if (isOverCard) {
       const overCardData = cards[overId];
       if (!overCardData) return;
       if (activeCardData.column !== overCardData.column) {
-        moveCard(activeId, overCardData.column);
+        moveCard(project.id, activeId, overCardData.column).catch(() => {});
       }
     }
   };
@@ -289,9 +297,8 @@ export function ProjectBoard() {
       const colCards = columns[targetColumn] || [];
       const oldIndex = colCards.indexOf(activeId);
       const newIndex = isNaN(colCards.indexOf(overId)) ? oldIndex : colCards.indexOf(overId);
-      
       if (oldIndex !== newIndex) {
-        reorderColumn(targetColumn, arrayMove(colCards, oldIndex, newIndex));
+        reorderColumn(project.id, targetColumn, arrayMove(colCards, oldIndex, newIndex)).catch(() => {});
       }
     }
 
@@ -309,11 +316,11 @@ export function ProjectBoard() {
             toast.dismiss(t.id);
             try {
               await mergePull(project.github.owner, project.github.repo, cardData.prNumber!);
-              updateCard(cardData.id, { prMerged: true });
+              await updateCard(project.id, cardData.id, { prMerged: true });
               toast.success('PR Merged');
             } catch (err: any) {
               toast.error(err.message || 'Merge failed');
-              moveCard(cardData.id, cardData.column);
+              moveCard(project.id, cardData.id, cardData.column).catch(() => {});
             }
           }}>Merge</Button>
         </div>
@@ -341,62 +348,66 @@ export function ProjectBoard() {
       </header>
 
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex h-full gap-6 items-start">
-            {COLUMNS.map((col) => {
-              const colCardIds = columns[col.id] || [];
-              const colCards = colCardIds
-                .map((cid) => cards[cid])
-                .filter(Boolean)
-                .filter((c) => c.projectId === project.id);
+        {loading ? (
+          <div className="flex h-full items-center justify-center text-muted-foreground text-sm">Loading board…</div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex h-full gap-6 items-start">
+              {COLUMNS.map((col) => {
+                const colCardIds = columns[col.id] || [];
+                const colCards = colCardIds
+                  .map((cid) => cards[cid])
+                  .filter(Boolean)
+                  .filter((c) => c.projectId === project.id);
 
-              return (
-                <div key={col.id} className="w-80 flex-none flex flex-col max-h-full bg-card/50 rounded-lg border border-border overflow-hidden">
-                  <div className="p-3 border-b border-border flex items-center justify-between bg-card/80">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full bg-current ${col.color}`} />
-                      <h3 className="font-semibold text-sm text-foreground">{col.label}</h3>
+                return (
+                  <div key={col.id} className="w-80 flex-none flex flex-col max-h-full bg-card/50 rounded-lg border border-border overflow-hidden">
+                    <div className="p-3 border-b border-border flex items-center justify-between bg-card/80">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full bg-current ${col.color}`} />
+                        <h3 className="font-semibold text-sm text-foreground">{col.label}</h3>
+                      </div>
+                      <Badge variant="secondary" className="px-1.5 min-w-[1.5rem] justify-center text-xs">
+                        {colCards.length}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="px-1.5 min-w-[1.5rem] justify-center text-xs">
-                      {colCards.length}
-                    </Badge>
+
+                    <SortableContext id={col.id} items={colCards.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                      <div className="p-3 flex-1 overflow-y-auto min-h-[100px]">
+                        {colCards.map((card) => (
+                          <SortableCard
+                            key={card.id}
+                            card={card}
+                            onClick={() => {
+                              setEditCard(card);
+                              setEditTitle(card.title);
+                              setEditDesc(card.description || '');
+                            }}
+                          />
+                        ))}
+                        <ColumnDroppable id={col.id} />
+                      </div>
+                    </SortableContext>
                   </div>
+                );
+              })}
+            </div>
 
-                  <SortableContext id={col.id} items={colCards.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                    <div className="p-3 flex-1 overflow-y-auto min-h-[100px]">
-                      {colCards.map((card) => (
-                        <SortableCard
-                          key={card.id}
-                          card={card}
-                          onClick={() => {
-                            setEditCard(card);
-                            setEditTitle(card.title);
-                            setEditDesc(card.description || '');
-                          }}
-                        />
-                      ))}
-                      <ColumnDroppable id={col.id} />
-                    </div>
-                  </SortableContext>
+            <DragOverlay>
+              {activeCard ? (
+                <div className="bg-card border border-primary rounded-md p-3 opacity-90 shadow-lg rotate-2 w-80">
+                  <div className="font-medium text-sm text-foreground">{activeCard.title}</div>
                 </div>
-              );
-            })}
-          </div>
-
-          <DragOverlay>
-            {activeCard ? (
-              <div className="bg-card border border-primary rounded-md p-3 opacity-90 shadow-lg rotate-2 w-80">
-                <div className="font-medium text-sm text-foreground">{activeCard.title}</div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </div>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
