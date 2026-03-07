@@ -16,30 +16,32 @@ import { Select } from '@/components/ui/select';
 
 type PdfState = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; url: string } | { status: 'error'; message: string };
 
-function hunkLines(diffHunk: string, line: number | null, startLine: number | null): string[] {
+interface HunkLine { lineNumber: number | null; content: string; }
+
+function hunkLines(diffHunk: string, line: number | null, startLine: number | null): HunkLine[] {
   const rawLines = diffHunk.split('\n');
   const headerMatch = rawLines[0]?.match(/\+(\d+)/);
   if (!line || !headerMatch) {
     const changed = rawLines.slice(1).filter((l) => l.startsWith('+') || l.startsWith('-'));
     const last = changed[changed.length - 1] ?? rawLines[rawLines.length - 1];
-    return last ? [last] : [];
+    return last ? [{ lineNumber: line, content: last }] : [];
   }
 
   const hunkStart = parseInt(headerMatch[1], 10);
   const endLine = line;
   const beginLine = startLine ?? line;
 
-  const result: string[] = [];
+  const result: HunkLine[] = [];
   let currentLine = hunkStart - 1;
   for (let i = 1; i < rawLines.length; i++) {
     const l = rawLines[i] ?? '';
     if (!l.startsWith('-')) currentLine++;
     if (currentLine >= beginLine && currentLine <= endLine) {
-      result.push(l);
+      result.push({ lineNumber: l.startsWith('-') ? null : currentLine, content: l });
     }
     if (currentLine > endLine) break;
   }
-  return result.length > 0 ? result : [rawLines[rawLines.length - 1] ?? ''];
+  return result.length > 0 ? result : [{ lineNumber: line, content: rawLines[rawLines.length - 1] ?? '' }];
 }
 
 export function PRViewPage() {
@@ -316,16 +318,21 @@ export function PRViewPage() {
                       </div>
 
                       {firstComment.diffHunk && (
-                        <pre className="text-[10px] leading-5 font-mono overflow-x-auto bg-[#0d1117] px-3 py-2 border-b border-border/50">
-                          {hunkLines(firstComment.diffHunk, firstComment.line, firstComment.startLine).map((line, i) => (
+                        <pre className="text-[10px] leading-5 font-mono overflow-x-auto bg-[#0d1117] border-b border-border/50">
+                          {hunkLines(firstComment.diffHunk, firstComment.line, firstComment.startLine).map(({ lineNumber, content }, i) => (
                             <div
                               key={i}
-                              className={
-                                line.startsWith('+') ? 'text-green-400' :
-                                line.startsWith('-') ? 'text-red-400' :
+                              className={`flex ${
+                                content.startsWith('+') ? 'text-green-400' :
+                                content.startsWith('-') ? 'text-red-400' :
                                 'text-gray-300'
-                              }
-                            >{line}</div>
+                              }`}
+                            >
+                              <span className="select-none w-10 shrink-0 text-right pr-3 text-gray-500 border-r border-border/30">
+                                {lineNumber ?? ''}
+                              </span>
+                              <span className="px-3">{content}</span>
+                            </div>
                           ))}
                         </pre>
                       )}
