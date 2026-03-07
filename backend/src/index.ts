@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import userRoutes from './routes/user';
 import reposRoutes from './routes/repos';
 import branchesRoutes from './routes/branches';
@@ -31,6 +32,12 @@ app.use(latexRoutes);
 
 app.use(errorHandler);
 
+const frontendDist = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(frontendDist, 'index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`Paperflow backend running on http://localhost:${PORT}`);
+  console.log(`Paperflow running on http://localhost:${PORT}`);
 });
