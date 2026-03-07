@@ -108,7 +108,8 @@ export function ProjectBoard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const project = useProjectStore((s) => s.getProject(id!));
+  const { projects, loading: projectsLoading, fetchProjects, getProject } = useProjectStore();
+  const project = getProject(id!);
   const { cards, columns, loading, fetchBoard, addCard, updateCard, deleteCard, moveCard, reorderColumn } = useKanbanStore();
   const { githubToken } = useConfigStore();
 
@@ -134,6 +135,10 @@ export function ProjectBoard() {
   const [isCreatingPr, setIsCreatingPr] = useState(false);
 
   useEffect(() => {
+    if (projects.length === 0) fetchProjects();
+  }, []);
+
+  useEffect(() => {
     if (id) fetchBoard(id);
   }, [id, fetchBoard]);
 
@@ -147,6 +152,10 @@ export function ProjectBoard() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  if (projectsLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+  }
 
   if (!project) {
     return <div className="p-8 text-center text-muted-foreground">Project not found</div>;
