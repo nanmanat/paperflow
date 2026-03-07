@@ -1,9 +1,58 @@
 import { Router, Request, Response } from 'express';
-import { mkdtemp, writeFile, mkdir, rm } from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { mkdtemp, writeFile, mkdir, rm, access, chmod } from 'fs/promises';
 import { join, dirname } from 'path';
-import { tmpdir } from 'os';
+import { tmpdir, platform, arch } from 'os';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import https from 'https';
 import { Octokit } from '@octokit/rest';
-import { compile } from 'node-latex-compiler';
+
+const execFileAsync = promisify(execFile);
+
+const TECTONIC_VERSION = '0.15.0';
+const TECTONIC_BIN_DIR = join(tmpdir(), 'paperflow-tectonic');
+const TECTONIC_BIN = join(TECTONIC_BIN_DIR, 'tectonic');
+
+function tectonicUrl(): string {
+  const os = platform();
+  const cpu = arch();
+  if (os === 'darwin') {
+    const target = cpu === 'arm64'
+      ? 'aarch64-apple-darwin'
+      : 'x86_64-apple-darwin';
+    return `https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-${target}.tar.gz`;
+  }
+  return `https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz`;
+}
+
+function httpsGetFollowRedirects(url: string): Promise<import('http').IncomingMessage> {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'paperflow' } }, (res) => {
+      if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
+        httpsGetFollowRedirects(res.headers.location).then(resolve).catch(reject);
+        return;
+      }
+      resolve(res);
+    }).on('error', reject);
+  });
+}
+
+async function ensureTectonic(): Promise<string> {
+  try {
+    await access(TECTONIC_BIN);
+    return TECTONIC_BIN;
+  } catch {
+    await mkdir(TECTONIC_BIN_DIR, { recursive: true });
+    const tarPath = join(TECTONIC_BIN_DIR, 'tectonic.tar.gz');
+    const res = await httpsGetFollowRedirects(tectonicUrl());
+    await pipeline(res, createWriteStream(tarPath));
+    await execFileAsync('tar', ['-xzf', tarPath, '-C', TECTONIC_BIN_DIR]);
+    await chmod(TECTONIC_BIN, 0o755);
+    return TECTONIC_BIN;
+  }
+}
 
 const router = Router();
 
@@ -85,29 +134,27 @@ router.post('/api/latex/compile', async (req: Request, res: Response) => {
     const texAbsPath = join(tmpDir, filepath);
     const outDir = dirname(texAbsPath);
 
-    const texSource = await (await import('fs/promises')).readFile(texAbsPath, 'utf-8');
+    const { readFile } = await import('fs/promises');
+    const texSource = await readFile(texAbsPath, 'utf-8');
     if (needsThaiPatch(texSource)) {
       await writeFile(texAbsPath, patchThaiPreamble(texSource), 'utf-8');
     }
 
-    const result = await compile({
-      texFile: texAbsPath,
-      outputDir: outDir,
-    });
-
-    if (result.status !== 'success') {
-      res.status(422).json({ error: result.stderr || 'compile failed' });
-      return;
-    }
+    const tectonic = await ensureTectonic();
+    await execFileAsync(
+      tectonic,
+      ['-X', 'compile', '--outfmt', 'pdf', '--outdir', outDir, texAbsPath],
+      { timeout: 120000, cwd: outDir },
+    );
 
     const pdfPath = join(outDir, filepath.split('/').pop()!.replace(/\.tex$/, '.pdf'));
-    const pdf = await (await import('fs/promises')).readFile(pdfPath);
+    const pdf = await readFile(pdfPath);
 
     res.set('Content-Type', 'application/pdf');
     res.set('Content-Disposition', 'inline; filename="preview.pdf"');
     res.send(pdf);
   } catch (err: any) {
-    res.status(422).json({ error: err.message || 'compile failed' });
+    res.status(422).json({ error: err.stderr || err.message || 'compile failed' });
   } finally {
     if (tmpDir) rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }

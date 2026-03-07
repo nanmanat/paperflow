@@ -12,8 +12,7 @@
     "@octokit/rest": "^21.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "node-latex-compiler": "^1.0.5"
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
