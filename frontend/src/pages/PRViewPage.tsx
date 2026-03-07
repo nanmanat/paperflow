@@ -16,6 +16,12 @@ import { Select } from '@/components/ui/select';
 
 type PdfState = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; url: string } | { status: 'error'; message: string };
 
+function changedLinesFromHunk(diffHunk: string): string[] {
+  const lines = diffHunk.split('\n').filter((l) => !l.startsWith('@@'));
+  const changed = lines.filter((l) => l.startsWith('+') || l.startsWith('-'));
+  return changed.length > 0 ? changed : lines.slice(-1);
+}
+
 export function PRViewPage() {
   const { id, number } = useParams<{ id: string; number: string }>();
   const prNum = parseInt(number || '0', 10);
@@ -290,14 +296,13 @@ export function PRViewPage() {
                       </div>
 
                       {firstComment.diffHunk && (
-                        <pre className="text-[10px] leading-5 font-mono overflow-x-auto bg-[#0d1117] px-3 py-2 border-b border-border/50 max-h-40">
-                          {firstComment.diffHunk.split('\n').map((line, i) => (
+                        <pre className="text-[10px] leading-5 font-mono overflow-x-auto bg-[#0d1117] px-3 py-2 border-b border-border/50">
+                          {changedLinesFromHunk(firstComment.diffHunk).map((line, i) => (
                             <div
                               key={i}
                               className={
                                 line.startsWith('+') ? 'text-green-400' :
                                 line.startsWith('-') ? 'text-red-400' :
-                                line.startsWith('@@') ? 'text-blue-400' :
                                 'text-gray-300'
                               }
                             >{line}</div>
