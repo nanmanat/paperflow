@@ -39,6 +39,28 @@ function httpsGetFollowRedirects(url: string): Promise<import('http').IncomingMe
   });
 }
 
+const FONT_DIR = join(tmpdir(), 'paperflow-fonts');
+
+const THAI_FONTS = [
+  { url: 'https://cdn.jsdelivr.net/npm/font-th-sarabun-new@1.0.0/fonts/THSarabunNew-webfont.ttf',         file: 'THSarabunNew.ttf' },
+  { url: 'https://cdn.jsdelivr.net/npm/font-th-sarabun-new@1.0.0/fonts/THSarabunNew_bold-webfont.ttf',    file: 'THSarabunNew-Bold.ttf' },
+  { url: 'https://cdn.jsdelivr.net/npm/font-th-sarabun-new@1.0.0/fonts/THSarabunNew_italic-webfont.ttf',  file: 'THSarabunNew-Italic.ttf' },
+  { url: 'https://cdn.jsdelivr.net/npm/font-th-sarabun-new@1.0.0/fonts/THSarabunNew_bolditalic-webfont.ttf', file: 'THSarabunNew-BoldItalic.ttf' },
+];
+
+async function ensureFonts(): Promise<void> {
+  await mkdir(FONT_DIR, { recursive: true });
+  await Promise.all(
+    THAI_FONTS.map(async ({ url, file }) => {
+      const dest = join(FONT_DIR, file);
+      const alreadyExists = await access(dest).then(() => true).catch(() => false);
+      if (alreadyExists) return;
+      const res = await httpsGetFollowRedirects(url);
+      await pipeline(res, createWriteStream(dest));
+    })
+  );
+}
+
 async function ensureTectonic(): Promise<string> {
   try {
     await access(TECTONIC_BIN);
@@ -140,11 +162,11 @@ router.post('/api/latex/compile', async (req: Request, res: Response) => {
       await writeFile(texAbsPath, patchThaiPreamble(texSource), 'utf-8');
     }
 
-    const tectonic = await ensureTectonic();
+    const [tectonic] = await Promise.all([ensureTectonic(), ensureFonts()]);
     await execFileAsync(
       tectonic,
       ['-X', 'compile', '--outfmt', 'pdf', '--outdir', outDir, texAbsPath],
-      { timeout: 120000, cwd: outDir },
+      { timeout: 120000, cwd: outDir, env: { ...process.env, OSFONTDIR: FONT_DIR } },
     );
 
     const pdfPath = join(outDir, filepath.split('/').pop()!.replace(/\.tex$/, '.pdf'));
