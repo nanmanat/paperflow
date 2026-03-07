@@ -395,6 +395,15 @@ export function PRViewPage() {
                       <option key={f.filename} value={f.filename}>{f.filename}</option>
                     ))}
                   </Select>
+                  <a
+                    href={pr.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View on GitHub
+                  </a>
                 </div>
 
                 <div className="flex-1 min-h-0">
