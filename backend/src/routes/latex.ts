@@ -115,20 +115,18 @@ function patchFontPaths(source: string, fontDir: string): string {
     `UprightFont=THSarabunNew.ttf,` +
     `BoldFont=THSarabunNew-Bold.ttf,` +
     `ItalicFont=THSarabunNew-Italic.ttf,` +
-    `BoldItalicFont=THSarabunNew-BoldItalic.ttf,` +
-    `Script=Thai`;
-
-  const replacement = `\\setmainfont[${fileOpts}]{TH Sarabun New}`;
-
-  // Match \setmainfont with optional pre-name [...] AND optional post-name [...],
-  // both of which may span multiple lines. [^\]]* stops at the first ] so it
-  // won't accidentally consume unrelated brackets.
-  let patched = source.replace(
-    /\\setmainfont\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
-    replacement,
-  );
+    `BoldItalicFont=THSarabunNew-BoldItalic.ttf`;
 
   const familyReplacement = `[${fileOpts}]`;
+
+  const setmainfontReplacement =
+    `\\setmainfont[${fileOpts},Script=Thai]{TH Sarabun New}\n` +
+    `\\newfontfamily\\thaifont${familyReplacement}{TH Sarabun New}`;
+
+  let patched = source.replace(
+    /\\setmainfont\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
+    setmainfontReplacement,
+  );
 
   patched = patched.replace(
     /\\newfontfamily(\s*\\[a-zA-Z]+)\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
