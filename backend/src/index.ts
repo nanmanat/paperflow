@@ -1,0 +1,36 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import userRoutes from './routes/user';
+import reposRoutes from './routes/repos';
+import branchesRoutes from './routes/branches';
+import pullsRoutes from './routes/pulls';
+import contentsRoutes from './routes/contents';
+import latexRoutes from './routes/latex';
+import { errorHandler } from './middleware/errorHandler';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors({
+  origin: '*',
+  allowedHeaders: '*',
+  exposedHeaders: ['X-Github-Token'],
+}));
+
+app.use(express.json({ limit: '10mb' }));
+
+app.use(userRoutes);
+app.use(reposRoutes);
+app.use(branchesRoutes);
+app.use(pullsRoutes);
+app.use(contentsRoutes);
+app.use(latexRoutes);
+
+app.use(errorHandler);
+
+app.listen(PORT, () => {
+  console.log(`Paperflow backend running on http://localhost:${PORT}`);
+});

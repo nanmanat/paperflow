@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 14% 12%;
+    --foreground: 220 13% 91%;
+    --card: 220 14% 16%;
+    --card-foreground: 220 13% 91%;
+    --border: 220 13% 22%;
+    --input: 220 13% 22%;
+    --ring: 266 52% 52%;
+    --primary: 266 52% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 20%;
+    --secondary-foreground: 220 13% 80%;
+    --muted: 220 14% 18%;
+    --muted-foreground: 220 9% 55%;
+    --accent: 220 14% 20%;
+    --accent-foreground: 220 13% 91%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 0.375rem;
+    --sidebar: 222 16% 10%;
+    --sidebar-foreground: 220 13% 80%;
+    --sidebar-border: 220 13% 18%;
+  }
+}
+
+* { border-color: hsl(var(--border)); }
+body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+/* ─── diff2html full dark theme (GitLab-style) ─────────────────────────────── */
+
+/* Reset light theme defaults from the bundled CSS */
+.d2h-wrapper,
+.d2h-file-wrapper,
+.d2h-file-header,
+.d2h-file-diff,
+.d2h-code-wrapper,
+.d2h-diff-table,
+.d2h-diff-tbody,
+.d2h-diff-td,
+.d2h-code-line,
+.d2h-code-side-line,
+.d2h-code-linenumber,
+.d2h-code-side-linenumber,
+.d2h-file-list-wrapper,
+.d2h-file-list,
+.d2h-file-list-header,
+.d2h-file-list-title,
+.d2h-file-switch,
+.d2h-tag {
+  background-color: transparent !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Outer wrapper */
+.d2h-wrapper {
+  background: hsl(var(--card)) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', monospace !important;
+  font-size: 11.5px !important;
+  line-height: 1.35 !important;
+}
+
+/* File list (summary at top) */
+.d2h-file-list-wrapper {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 4px !important;
+  margin-bottom: 6px !important;
+}
+.d2h-file-list-header {
+  background: hsl(220 14% 14%) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  padding: 4px 8px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 11px !important;
+}
+.d2h-file-list li {
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+.d2h-file-list li:last-child { border-bottom: none !important; }
+.d2h-file-list a {
+  color: hsl(var(--foreground)) !important;
+  text-decoration: none !important;
+  padding: 3px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+}
+.d2h-file-list a:hover { background: hsl(var(--accent)) !important; }
+
+/* File block */
+.d2h-file-wrapper {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 4px !important;
+  margin-bottom: 6px !important;
+  overflow: hidden !important;
+}
+
+/* File header bar */
+.d2h-file-header {
+  background: hsl(220 14% 14%) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  padding: 4px 8px !important;
+  color: hsl(var(--foreground)) !important;
+  font-weight: 500 !important;
+}
+.d2h-file-name { color: hsl(var(--foreground)) !important; font-weight: 600 !important; font-size: 11px !important; }
+.d2h-tag { color: hsl(var(--muted-foreground)) !important; font-size: 10px !important; }
+
+/* Diff table */
+.d2h-diff-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background: hsl(var(--card)) !important;
+}
+
+/* Line numbers */
+.d2h-code-linenumber,
+.d2h-code-side-linenumber {
+  background: hsl(220 14% 13%) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-right: 1px solid hsl(var(--border)) !important;
+  min-width: 32px !important;
+  text-align: right !important;
+  padding: 0 4px !important;
+  user-select: none !important;
+  font-size: 10px !important;
+}
+
+/* Normal code lines */
+.d2h-code-line,
+.d2h-code-side-line {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  padding: 0 6px !important;
+  white-space: pre !important;
+}
+
+/* ── ADDED lines (green) ── */
+.d2h-ins,
+.d2h-ins > td,
+tr.d2h-ins > td {
+  background: #0d2b1a !important;
+}
+.d2h-ins .d2h-code-linenumber,
+.d2h-ins .d2h-code-side-linenumber,
+tr.d2h-ins .d2h-code-linenumber,
+tr.d2h-ins .d2h-code-side-linenumber {
+  background: #0d2b1a !important;
+  border-right-color: #1a5c35 !important;
+  color: #4caf6e !important;
+}
+.d2h-ins .d2h-code-line,
+.d2h-ins .d2h-code-side-line,
+tr.d2h-ins .d2h-code-line,
+tr.d2h-ins .d2h-code-side-line {
+  background: #0d2b1a !important;
+  color: #b9f0c8 !important;
+}
+/* inline added token highlight */
+.d2h-ins .d2h-code-line-ctn ins,
+.d2h-ins .d2h-code-side-line-ctn ins {
+  background: #1e6b3a !important;
+  color: #ccf5d8 !important;
+  text-decoration: none !important;
+  border-radius: 2px !important;
+  padding: 0 1px !important;
+}
+
+/* ── DELETED lines (red) ── */
+.d2h-del,
+.d2h-del > td,
+tr.d2h-del > td {
+  background: #2b0d0d !important;
+}
+.d2h-del .d2h-code-linenumber,
+.d2h-del .d2h-code-side-linenumber,
+tr.d2h-del .d2h-code-linenumber,
+tr.d2h-del .d2h-code-side-linenumber {
+  background: #2b0d0d !important;
+  border-right-color: #5c1a1a !important;
+  color: #cf6679 !important;
+}
+.d2h-del .d2h-code-line,
+.d2h-del .d2h-code-side-line,
+tr.d2h-del .d2h-code-line,
+tr.d2h-del .d2h-code-side-line {
+  background: #2b0d0d !important;
+  color: #f0b9c0 !important;
+}
+/* inline deleted token highlight */
+.d2h-del .d2h-code-line-ctn del,
+.d2h-del .d2h-code-side-line-ctn del {
+  background: #6b1e2a !important;
+  color: #f5ccd0 !important;
+  text-decoration: none !important;
+  border-radius: 2px !important;
+  padding: 0 1px !important;
+}
+
+/* ── INFO / hunk header (@@ lines) ── */
+.d2h-info,
+tr.d2h-info > td {
+  background: hsl(220 20% 18%) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-style: italic !important;
+}
+.d2h-info .d2h-code-linenumber,
+.d2h-info .d2h-code-side-linenumber {
+  background: hsl(220 20% 15%) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Context (unchanged) lines */
+.d2h-cntx,
+tr.d2h-cntx > td {
+  background: hsl(var(--card)) !important;
+}
+
+/* Side-by-side empty filler cells */
+.d2h-emptyplaceholder,
+tr.d2h-emptyplaceholder > td {
+  background: hsl(220 14% 11%) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Column divider in side-by-side */
+.d2h-diff-side-by-side .d2h-file-side-diff:first-child {
+  border-right: 1px solid hsl(var(--border)) !important;
+}
+
+/* Collapse button */
+.d2h-collapse-toggle {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Scrollbars inside diff */
+.d2h-wrapper ::-webkit-scrollbar { height: 6px; width: 6px; }
+.d2h-wrapper ::-webkit-scrollbar-track { background: hsl(var(--card)); }
+.d2h-wrapper ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+.d2h-wrapper ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
