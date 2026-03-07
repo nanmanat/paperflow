@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import userRoutes from './routes/user';
+import projectsRoutes from './routes/projects';
 import reposRoutes from './routes/repos';
 import branchesRoutes from './routes/branches';
 import pullsRoutes from './routes/pulls';
@@ -24,6 +25,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 app.use(userRoutes);
+app.use(projectsRoutes);
 app.use(reposRoutes);
 app.use(branchesRoutes);
 app.use(pullsRoutes);
