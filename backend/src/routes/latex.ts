@@ -109,18 +109,37 @@ function patchThaiPreamble(source: string): string {
 
 function patchFontPaths(source: string, fontDir: string): string {
   const dir = fontDir.replace(/\\/g, '/') + '/';
-  const fontOptions =
+
+  const replacement =
+    `\\setmainfont[` +
+    `Path=${dir},` +
+    `UprightFont=THSarabunNew.ttf,` +
+    `BoldFont=THSarabunNew-Bold.ttf,` +
+    `ItalicFont=THSarabunNew-Italic.ttf,` +
+    `BoldItalicFont=THSarabunNew-BoldItalic.ttf` +
+    `]{TH Sarabun New}`;
+
+  // Match \setmainfont with optional pre-name [...] AND optional post-name [...],
+  // both of which may span multiple lines. [^\]]* stops at the first ] so it
+  // won't accidentally consume unrelated brackets.
+  let patched = source.replace(
+    /\\setmainfont\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
+    replacement,
+  );
+
+  const familyReplacement =
     `[Path=${dir},` +
     `UprightFont=THSarabunNew.ttf,` +
     `BoldFont=THSarabunNew-Bold.ttf,` +
     `ItalicFont=THSarabunNew-Italic.ttf,` +
     `BoldItalicFont=THSarabunNew-BoldItalic.ttf]`;
 
-  return source
-    .replace(/\\setmainfont\s*(?:\[.*?\])?\s*\{TH Sarabun New\}/gs,
-      `\\setmainfont${fontOptions}{TH Sarabun New}`)
-    .replace(/\\newfontfamily(\s*\\[a-zA-Z]+)\s*(?:\[.*?\])?\s*\{TH Sarabun New\}/gs,
-      `\\newfontfamily$1${fontOptions}{TH Sarabun New}`);
+  patched = patched.replace(
+    /\\newfontfamily(\s*\\[a-zA-Z]+)\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
+    `\\newfontfamily$1${familyReplacement}{TH Sarabun New}`,
+  );
+
+  return patched;
 }
 
 router.post('/api/latex/compile', async (req: Request, res: Response) => {
