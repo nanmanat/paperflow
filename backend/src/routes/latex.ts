@@ -1,16 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { mkdtemp, writeFile, readFile, mkdir, rm } from 'fs/promises';
+import { mkdtemp, writeFile, mkdir, rm } from 'fs/promises';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { Octokit } from '@octokit/rest';
+import { compile } from 'node-latex-compiler';
 
-const execFileAsync = promisify(execFile);
 const router = Router();
-
-const XELATEX  = '/Library/TeX/texbin/xelatex';
-const PDFLATEX = '/Library/TeX/texbin/pdflatex';
 
 const TEXT_EXTENSIONS = new Set([
   '.tex', '.cls', '.sty', '.bst', '.bib', '.cfg', '.def', '.fd',
@@ -37,17 +32,7 @@ function needsThaiPatch(source: string): boolean {
 function patchThaiPreamble(source: string): string {
   return source.replace(
     /(\\documentclass(?:\[.*?\])?\{.*?\})/,
-    '$1\n\\usepackage{thaispec}',
-  );
-}
-
-const LATEX_ARGS = ['-interaction=nonstopmode', '-halt-on-error'];
-
-async function runLatex(engine: string, outDir: string, texAbsPath: string): Promise<void> {
-  await execFileAsync(
-    engine,
-    [...LATEX_ARGS, '-output-directory', outDir, texAbsPath],
-    { timeout: 60000, cwd: outDir },
+    '$1\n\\usepackage{fontspec}\n\\usepackage{polyglossia}\n\\setmainlanguage{thai}',
   );
 }
 
@@ -100,46 +85,29 @@ router.post('/api/latex/compile', async (req: Request, res: Response) => {
     const texAbsPath = join(tmpDir, filepath);
     const outDir = dirname(texAbsPath);
 
-    const texSource = await readFile(texAbsPath, 'utf-8');
+    const texSource = await (await import('fs/promises')).readFile(texAbsPath, 'utf-8');
     if (needsThaiPatch(texSource)) {
       await writeFile(texAbsPath, patchThaiPreamble(texSource), 'utf-8');
     }
 
-    const hasThai = THAI_RANGE.test(texSource);
-    const engines = hasThai ? [XELATEX] : [XELATEX, PDFLATEX];
+    const result = await compile({
+      texFile: texAbsPath,
+      outputDir: outDir,
+    });
 
-    let lastError: unknown;
-    for (const engine of engines) {
-      try {
-        await runLatex(engine, outDir, texAbsPath);
-        lastError = null;
-        break;
-      } catch (err) {
-        lastError = err;
-      }
+    if (result.status !== 'success') {
+      res.status(422).json({ error: result.stderr || 'compile failed' });
+      return;
     }
-    if (lastError) throw lastError;
 
     const pdfPath = join(outDir, filepath.split('/').pop()!.replace(/\.tex$/, '.pdf'));
-    const pdf = await readFile(pdfPath);
+    const pdf = await (await import('fs/promises')).readFile(pdfPath);
 
     res.set('Content-Type', 'application/pdf');
     res.set('Content-Disposition', 'inline; filename="preview.pdf"');
     res.send(pdf);
   } catch (err: any) {
-    let logContent = '';
-    if (tmpDir) {
-      const logPath = join(tmpDir, filepath!.replace(/\.tex$/, '.log'));
-      try { logContent = await readFile(logPath, 'utf-8'); } catch { /* no log */ }
-    }
-
-    const errorLines = logContent
-      .split('\n')
-      .filter((l) => l.startsWith('!') || l.includes('Fatal error'))
-      .slice(0, 10)
-      .join('\n');
-
-    res.status(422).json({ error: errorLines || err.message || 'compile failed' });
+    res.status(422).json({ error: err.message || 'compile failed' });
   } finally {
     if (tmpDir) rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
