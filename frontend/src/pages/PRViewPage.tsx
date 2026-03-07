@@ -19,7 +19,8 @@ type PdfState = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; 
 function changedLinesFromHunk(diffHunk: string): string[] {
   const lines = diffHunk.split('\n').filter((l) => !l.startsWith('@@'));
   const changed = lines.filter((l) => l.startsWith('+') || l.startsWith('-'));
-  return changed.length > 0 ? changed : lines.slice(-1);
+  const last = changed.length > 0 ? changed[changed.length - 1] : lines[lines.length - 1];
+  return last ? [last] : [];
 }
 
 export function PRViewPage() {
