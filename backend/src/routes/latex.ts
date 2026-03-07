@@ -110,14 +110,15 @@ function patchThaiPreamble(source: string): string {
 function patchFontPaths(source: string, fontDir: string): string {
   const dir = fontDir.replace(/\\/g, '/') + '/';
 
-  const replacement =
-    `\\setmainfont[` +
+  const fileOpts =
     `Path=${dir},` +
     `UprightFont=THSarabunNew.ttf,` +
     `BoldFont=THSarabunNew-Bold.ttf,` +
     `ItalicFont=THSarabunNew-Italic.ttf,` +
-    `BoldItalicFont=THSarabunNew-BoldItalic.ttf` +
-    `]{TH Sarabun New}`;
+    `BoldItalicFont=THSarabunNew-BoldItalic.ttf,` +
+    `Script=Thai`;
+
+  const replacement = `\\setmainfont[${fileOpts}]{TH Sarabun New}`;
 
   // Match \setmainfont with optional pre-name [...] AND optional post-name [...],
   // both of which may span multiple lines. [^\]]* stops at the first ] so it
@@ -127,12 +128,7 @@ function patchFontPaths(source: string, fontDir: string): string {
     replacement,
   );
 
-  const familyReplacement =
-    `[Path=${dir},` +
-    `UprightFont=THSarabunNew.ttf,` +
-    `BoldFont=THSarabunNew-Bold.ttf,` +
-    `ItalicFont=THSarabunNew-Italic.ttf,` +
-    `BoldItalicFont=THSarabunNew-BoldItalic.ttf]`;
+  const familyReplacement = `[${fileOpts}]`;
 
   patched = patched.replace(
     /\\newfontfamily(\s*\\[a-zA-Z]+)\s*(?:\[[^\]]*\]\s*)?\{TH Sarabun New\}\s*(?:\[[^\]]*\])?/gs,
