@@ -22,7 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import toast from 'react-hot-toast';
-import { Plus, GitBranch, GitPullRequest, Trash2 } from 'lucide-react';
+import { Plus, GitBranch, GitPullRequest, Trash2, ExternalLink } from 'lucide-react';
 
 import { useKanbanStore, COLUMNS, ColumnId, KanbanCard } from '@/store/kanbanStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -42,7 +42,8 @@ import {
 import { Select } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
 
-function SortableCard({ card, onClick }: { card: KanbanCard; onClick: () => void }) {
+function SortableCard({ card, owner, repo, onClick }: { card: KanbanCard; owner: string; repo: string; onClick: () => void }) {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -57,6 +58,13 @@ function SortableCard({ card, onClick }: { card: KanbanCard; onClick: () => void
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+
+  const branchUrl = card.branchName
+    ? `https://github.com/${owner}/${repo}/tree/${card.branchName}`
+    : null;
+
+  const showBranchLink = (card.column === 'in_progress' || card.column === 'in_review') && branchUrl;
+  const showPrLink = card.column === 'in_review' && card.prNumber;
 
   return (
     <div
@@ -80,19 +88,50 @@ function SortableCard({ card, onClick }: { card: KanbanCard; onClick: () => void
       )}
       <div className="flex flex-wrap items-center gap-2 mt-1">
         {card.branchName && (
-          <Badge variant="secondary" className="text-[10px] font-mono flex items-center gap-1">
-            <GitBranch className="w-3 h-3" />
-            {card.branchName}
-          </Badge>
+          showBranchLink ? (
+            <a
+              href={branchUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => { e.preventDefault(); window.open(branchUrl!, '_blank'); }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Badge variant="secondary" className="text-[10px] font-mono flex items-center gap-1 hover:bg-secondary/80 cursor-pointer">
+                <GitBranch className="w-3 h-3" />
+                {card.branchName}
+                <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+              </Badge>
+            </a>
+          ) : (
+            <Badge variant="secondary" className="text-[10px] font-mono flex items-center gap-1">
+              <GitBranch className="w-3 h-3" />
+              {card.branchName}
+            </Badge>
+          )
         )}
         {card.prNumber && (
-          <Badge
-            variant={card.prMerged ? 'secondary' : 'success'}
-            className="text-[10px] flex items-center gap-1"
-          >
-            <GitPullRequest className="w-3 h-3" />
-            !{card.prNumber}
-          </Badge>
+          showPrLink ? (
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/projects/${card.projectId}/pulls/${card.prNumber}`); }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Badge
+                variant={card.prMerged ? 'secondary' : 'success'}
+                className="text-[10px] flex items-center gap-1 hover:opacity-80 cursor-pointer"
+              >
+                <GitPullRequest className="w-3 h-3" />
+                !{card.prNumber}
+              </Badge>
+            </span>
+          ) : (
+            <Badge
+              variant={card.prMerged ? 'secondary' : 'success'}
+              className="text-[10px] flex items-center gap-1"
+            >
+              <GitPullRequest className="w-3 h-3" />
+              !{card.prNumber}
+            </Badge>
+          )
         )}
       </div>
     </div>
@@ -393,6 +432,8 @@ export function ProjectBoard() {
                           <SortableCard
                             key={card.id}
                             card={card}
+                            owner={project.github.owner}
+                            repo={project.github.repo}
                             onClick={() => {
                               setEditCard(card);
                               setEditTitle(card.title);
