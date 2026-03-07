@@ -12,6 +12,10 @@ export default defineConfig({
     host: true,
     proxy: {}
   },
+  preview: {
+    port: 10000,
+    host: true,
+  },
   optimizeDeps: {
     exclude: ['latex.js'],
   },
