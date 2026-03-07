@@ -12,10 +12,10 @@ export const useConfigStore = create<ConfigState>()(
   persist(
     (set) => ({
       githubToken: '',
-      proxyUrl: 'http://localhost:3001',
+      proxyUrl: '',
       setGithubToken: (token) => set({ githubToken: token }),
       setProxyUrl: (url) => set({ proxyUrl: url }),
     }),
-    { name: 'paperflow-config' }
+    { name: 'paperflow-config-v2' }
   )
 )
