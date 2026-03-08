@@ -239,7 +239,7 @@ export function PRViewPage() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <a href={pr.html_url} target="_blank" rel="noopener noreferrer">
+            <a href={`${pr.html_url}/files`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="gap-1.5 text-xs h-7 px-2.5">
                 <ExternalLink className="w-3 h-3" /> View on GitHub
               </Button>
