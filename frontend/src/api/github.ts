@@ -108,7 +108,7 @@ export const createBranch = (owner: string, repo: string, branchName: string, fr
 export const listPulls = (owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open') =>
   request<GitHubPR[]>(`/api/repos/${owner}/${repo}/pulls?state=${state}`)
 export const getPull = (owner: string, repo: string, number: number) =>
-  request<GitHubPR>(`/api/repos/${owner}/${repo}/pulls/${number}/changes`)
+  request<GitHubPR>(`/api/repos/${owner}/${repo}/pulls/${number}`)
 export const getPullFiles = (owner: string, repo: string, number: number) =>
   request<GitHubPRFile[]>(`/api/repos/${owner}/${repo}/pulls/${number}/files`)
 export const getPullDiff = (owner: string, repo: string, number: number) =>
