@@ -17,6 +17,9 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       PORT: 3001
       DATABASE_URL: postgres://paperflow:paperflow@postgres:5432/paperflow
